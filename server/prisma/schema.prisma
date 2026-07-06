@@ -1,0 +1,109 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model ApplicationUser {
+  id                  String                 @id @default(uuid())
+  email               String                 @unique
+  firstName           String
+  middleName          String?
+  lastName            String?
+  nickname            String?
+  heightCm            Decimal?
+  dateOfBirth         DateTime?              @db.Date
+  profilePicturePath  String?
+  passwordHash        String
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  bodyComposition     BodyCompositionEntry[]
+  goals               Goal[]
+  goalValueUpdates    GoalValueUpdate[]
+  trainingLogs        TrainingLog[]
+}
+
+model BodyCompositionEntry {
+  id                String    @id @default(uuid())
+  userId            String
+  user              ApplicationUser @relation(fields: [userId], references: [id])
+  measuredAt        DateTime
+  weightKg          Decimal?
+  bodyFatPercent    Decimal?
+  musclePercent     Decimal?
+  visceralFatPercent Decimal?
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([userId, measuredAt(sort: Desc)])
+}
+
+model Goal {
+  id                 String            @id @default(uuid())
+  userId             String
+  user               ApplicationUser   @relation(fields: [userId], references: [id])
+  title              String
+  shortDescription   String?
+  longDescription    String?
+  startDate          DateTime          @db.Date
+  targetFinishDate   DateTime?         @db.Date
+  valueType          String
+  unit               String
+  direction          String // "increase" or "decrease"
+  startValue         Decimal
+  currentValue       Decimal
+  targetValue        Decimal
+  lastValueUpdateAt  DateTime?
+  isArchived         Boolean           @default(false)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  valueUpdates       GoalValueUpdate[]
+}
+
+model GoalValueUpdate {
+  id        String          @id @default(uuid())
+  goalId    String
+  goal      Goal            @relation(fields: [goalId], references: [id])
+  userId    String
+  user      ApplicationUser @relation(fields: [userId], references: [id])
+  value     Decimal
+  updatedAt DateTime
+  note      String?
+  createdAt DateTime        @default(now())
+}
+
+model TrainingType {
+  id                String        @id @default(uuid())
+  name              String
+  slug              String        @unique
+  thumbnailPath     String?
+  summarySchemaJson Json?
+  isActive          Boolean       @default(true)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  trainingLogs      TrainingLog[]
+}
+
+model TrainingLog {
+  id                       String        @id @default(uuid())
+  userId                   String
+  user                     ApplicationUser @relation(fields: [userId], references: [id])
+  trainingTypeId           String
+  trainingType             TrainingType  @relation(fields: [trainingTypeId], references: [id])
+  startedAt                DateTime
+  endedAt                  DateTime?
+  durationSeconds          Int?
+  caloriesConsumed         Int?
+  summaryJson              Json          @default("{}")
+  source                   String // "manual", "rowing_odometer", "import"
+  externalDeviceSessionId  String?       @unique
+  createdAt                DateTime      @default(now())
+  updatedAt                DateTime      @updatedAt
+}
